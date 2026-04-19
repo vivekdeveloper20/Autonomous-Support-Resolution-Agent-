@@ -4,6 +4,11 @@
 
 ![AI Ticket Agent Dashboard](./images/dashboard-screenshot.png)
 
+### 📷 More Screenshots
+
+![Dashboard Screenshot 2](./images/dashboard-screenshot-2.png)
+![Dashboard Screenshot 3](./images/dashboard-screenshot-3.png)
+
 ---
 
 ## 📌 Table of Contents
