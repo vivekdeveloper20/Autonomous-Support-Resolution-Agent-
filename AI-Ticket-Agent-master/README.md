@@ -9,6 +9,7 @@
 ![Dashboard Screenshot 2](./images/dashboard-screenshot-2.png)
 ![Dashboard Screenshot 3](./images/dashboard-screenshot-3.png)
 ![Dashboard Screenshot 4](./images/dashboard-screenshot-4.png)
+![Dashboard Screenshot 5](./images/dashboard-screenshot-5.png)
 
 ---
 
