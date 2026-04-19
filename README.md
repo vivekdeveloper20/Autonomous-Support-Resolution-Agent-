@@ -2,7 +2,9 @@
 
 > A production-grade, multi-agent IT support system powered by **Google ADK (Gemini)** with an autonomous **ReAct agent**, a **FastAPI backend**, and a modern **React + Tailwind dashboard**. The system can analyze problems, search a knowledge base, issue refunds, reply to customers, and escalate to human teams — all without manual intervention.
 
-![AI Ticket Agent Dashboard](./images/Screenshot%202026-04-19%20184736.png)
+![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot.png)
+
+![AI Ticket Agent Overview](./AI-Ticket-Agent-master/images/image.png)
 
 ---
 
@@ -72,11 +74,17 @@ The project has two layers that work together:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-![System Architecture](./images/Flowchart.jpeg)
+![System Architecture](./AI-Ticket-Agent-master/images/Flowchart.jpeg)
 
-## 🖼️ Project Screenshot
+## 🖼️ Project Screenshots
 
-![Dashboard Screenshot](./images/Screenshot%202026-04-19%20184736.png)
+![Dashboard Main View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184134.png)
+
+![Tickets List View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184147.png)
+
+![Ticket Detail View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184223.png)
+
+![Agent Logs View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184726.png)
 
 ### Agent Roles
 
@@ -212,7 +220,7 @@ This diagram shows the **end-to-end flow** of a ticket — from the moment a use
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
-![Autonomous Support Resolution Flowchart](./images/Detailed%20Autonomous%20Support%20Flowchart.png)
+![Autonomous Support Resolution Flowchart](./AI-Ticket-Agent-master/images/Detailed%20Autonomous%20Support%20Flowchart.png)
 
 ### Flow Summary in Plain Words
 
@@ -246,6 +254,8 @@ The ReAct (Reason + Act) agent is the core of the upgraded system. It works like
 │ and decides    │ real args│     │ back to LLM  │     │ before done  │
 └──────────┘     └──────────┘     └──────────────┘     └──────────────┘
 ```
+
+![AI Ticket Flow Diagram](./AI-Ticket-Agent-master/images/ai%20ticket%20foloow.jpg)
 
 **Example flow for a refund request:**
 
@@ -726,12 +736,16 @@ The home screen. Shows:
 - Grid of the 6 most recent tickets
 - Refresh button to reload live data
 
+![Dashboard Home](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184134.png)
+
 ### Tickets Page (`/tickets`)
 Full ticket management. Shows:
 - Search bar (searches by subject, ticket ID, or email)
 - Status and priority filter dropdowns
 - Card grid of all matching tickets
 - "New Ticket" button that opens a modal form to submit a ticket and trigger the agent
+
+![Tickets Page](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184147.png)
 
 ### Ticket Detail Page (`/tickets/:id`)
 Deep-dive into a single ticket. Shows:
@@ -742,12 +756,16 @@ Deep-dive into a single ticket. Shows:
 - **Tool Calls** — expandable rows for each tool call showing the arguments sent and the result received, plus retry count if applicable
 - Auto-polls every 3 seconds while the agent is still running
 
+![Ticket Detail Page](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184223.png)
+
 ### Logs Page (`/logs`)
 Live audit log viewer. Shows:
 - Terminal-style panel with color-coded log entries
 - Each entry shows: timestamp, status, ticket ID, subject, confidence score
 - Live mode (auto-refreshes every 4 seconds) with pause/resume toggle
 - Raw JSON viewer for the latest log entry
+
+![Logs Page](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184726.png)
 
 ---
 
