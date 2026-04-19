@@ -70,6 +70,8 @@ The project has two layers that work together:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+![System Architecture](./images/Flowchart.jpeg)
+
 ### Agent Roles
 
 | Agent | Role | What It Does |
@@ -203,6 +205,8 @@ This diagram shows the **end-to-end flow** of a ticket — from the moment a use
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
+
+![Autonomous Support Resolution Flowchart](./images/Detailed%20Autonomous%20Support%20Flowchart.png)
 
 ### Flow Summary in Plain Words
 
