@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+sqlalchemy==2.0.23
+python-dotenv==1.0.1
+google-adk==1.0.0
+google-genai==1.16.1
+slack-sdk==3.27.1
+aiofiles==23.2.1
+pydantic==2.7.1
+asyncio-throttle==1.0.2
