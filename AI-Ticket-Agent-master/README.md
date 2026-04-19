@@ -2,7 +2,7 @@
 
 > A production-grade, multi-agent IT support system powered by **Google ADK (Gemini)** with an autonomous **ReAct agent**, a **FastAPI backend**, and a modern **React + Tailwind dashboard**. The system can analyze problems, search a knowledge base, issue refunds, reply to customers, and escalate to human teams — all without manual intervention.
 
-![AI Ticket Agent Dashboard](./images/Screenshot%202026-04-19%20184736.png)
+![AI Ticket Agent Dashboard](./images/dashboard-screenshot.png)
 
 ---
 
