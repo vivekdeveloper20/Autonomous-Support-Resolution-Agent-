@@ -1,112 +1,110 @@
 """
 Tool implementations for the ReAct agent.
+Loads real data from hackathon JSON files (customers, orders, products, knowledge-base).
 Each tool is a plain async function that returns a dict result.
 """
 
-import random
+import json
 import asyncio
 import logging
+import os
+import random
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
 logger = logging.getLogger("tools")
 
-# ─── Mock data stores ────────────────────────────────────────────────────────
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
-CUSTOMERS = {
-    "alice@example.com": {
-        "id": "C001", "name": "Alice Johnson", "email": "alice@example.com",
-        "tier": "premium", "account_age_days": 730, "total_orders": 45,
-    },
-    "bob@example.com": {
-        "id": "C002", "name": "Bob Smith", "email": "bob@example.com",
-        "tier": "standard", "account_age_days": 180, "total_orders": 12,
-    },
-    "carol@example.com": {
-        "id": "C003", "name": "Carol White", "email": "carol@example.com",
-        "tier": "premium", "account_age_days": 1095, "total_orders": 88,
-    },
-}
+# ─── Load data from JSON files ───────────────────────────────────────────────
 
-ORDERS = {
-    "ORD-001": {
-        "order_id": "ORD-001", "customer_email": "alice@example.com",
-        "product_id": "PROD-A1", "amount": 149.99, "status": "delivered",
-        "created_at": (datetime.now() - timedelta(days=5)).isoformat(),
-        "delivered_at": (datetime.now() - timedelta(days=2)).isoformat(),
-    },
-    "ORD-002": {
-        "order_id": "ORD-002", "customer_email": "bob@example.com",
-        "product_id": "PROD-B2", "amount": 59.99, "status": "shipped",
-        "created_at": (datetime.now() - timedelta(days=1)).isoformat(),
-        "delivered_at": None,
-    },
-    "ORD-003": {
-        "order_id": "ORD-003", "customer_email": "carol@example.com",
-        "product_id": "PROD-C3", "amount": 299.99, "status": "delivered",
-        "created_at": (datetime.now() - timedelta(days=30)).isoformat(),
-        "delivered_at": (datetime.now() - timedelta(days=27)).isoformat(),
-    },
-}
+def _load_json(filename: str) -> list:
+    path = os.path.join(DATA_DIR, filename)
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-PRODUCTS = {
-    "PROD-A1": {
-        "product_id": "PROD-A1", "name": "Wireless Headphones Pro",
-        "category": "Electronics", "price": 149.99,
-        "return_window_days": 30, "warranty_months": 12,
-    },
-    "PROD-B2": {
-        "product_id": "PROD-B2", "name": "Ergonomic Mouse",
-        "category": "Peripherals", "price": 59.99,
-        "return_window_days": 30, "warranty_months": 6,
-    },
-    "PROD-C3": {
-        "product_id": "PROD-C3", "name": "4K Monitor 27\"",
-        "category": "Displays", "price": 299.99,
-        "return_window_days": 14, "warranty_months": 24,
-    },
-}
 
-KNOWLEDGE_BASE = [
-    {
-        "id": "KB-001", "title": "How to reset your password",
-        "content": "Go to login page → click 'Forgot Password' → enter email → check inbox for reset link.",
-        "tags": ["password", "account", "login"],
-    },
-    {
-        "id": "KB-002", "title": "Return & Refund Policy",
-        "content": "Items can be returned within 30 days of delivery (14 days for displays). Refunds processed in 3-5 business days.",
-        "tags": ["refund", "return", "policy"],
-    },
-    {
-        "id": "KB-003", "title": "Shipping delays",
-        "content": "Standard shipping takes 3-7 days. Express 1-2 days. Delays may occur during peak seasons.",
-        "tags": ["shipping", "delivery", "delay"],
-    },
-    {
-        "id": "KB-004", "title": "Product warranty claims",
-        "content": "Contact support with order ID and description of defect. Warranty covers manufacturing defects only.",
-        "tags": ["warranty", "defect", "repair"],
-    },
-    {
-        "id": "KB-005", "title": "Account billing issues",
-        "content": "For double charges or incorrect billing, provide order ID. Corrections processed within 24 hours.",
-        "tags": ["billing", "charge", "payment"],
-    },
-]
+def _load_knowledge_base(filename: str = "knowledge-base.md") -> list[dict]:
+    """Parse knowledge-base.md into searchable sections."""
+    path = os.path.join(DATA_DIR, filename)
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    sections = []
+    current_title = ""
+    current_content = ""
+    current_tags = []
+
+    for line in content.split("\n"):
+        if line.startswith("## ") or line.startswith("### "):
+            if current_title and current_content.strip():
+                sections.append({
+                    "id": f"KB-{len(sections)+1:03d}",
+                    "title": current_title.strip(),
+                    "content": current_content.strip(),
+                    "tags": current_tags,
+                })
+            current_title = line.lstrip("#").strip()
+            current_content = ""
+            # Auto-generate tags from title
+            current_tags = [w.lower() for w in re.findall(r'\w+', current_title)
+                           if len(w) > 3 and w.lower() not in ("with", "from", "that", "this", "have")]
+        else:
+            current_content += line + "\n"
+
+    if current_title and current_content.strip():
+        sections.append({
+            "id": f"KB-{len(sections)+1:03d}",
+            "title": current_title.strip(),
+            "content": current_content.strip(),
+            "tags": current_tags,
+        })
+
+    return sections
+
+
+# ─── Build indexed data stores ───────────────────────────────────────────────
+
+_raw_customers = _load_json("customers.json")
+_raw_orders = _load_json("orders.json")
+_raw_products = _load_json("products.json")
+_raw_tickets = _load_json("tickets.json")
+KNOWLEDGE_BASE = _load_knowledge_base()
+
+# Index by email (lowercase)
+CUSTOMERS: dict[str, dict] = {c["email"].lower(): c for c in _raw_customers}
+# Also index by customer_id
+CUSTOMERS_BY_ID: dict[str, dict] = {c["customer_id"]: c for c in _raw_customers}
+
+# Index by order_id (uppercase)
+ORDERS: dict[str, dict] = {o["order_id"].upper(): o for o in _raw_orders}
+
+# Index by product_id (uppercase)
+PRODUCTS: dict[str, dict] = {p["product_id"].upper(): p for p in _raw_products}
 
 # Track issued refunds in memory (in production this would be DB)
 _issued_refunds: dict[str, float] = {}
 
+# Pre-mark already-refunded orders
+for _oid, _order in ORDERS.items():
+    if _order.get("refund_status") == "refunded":
+        _issued_refunds[_oid] = _order.get("amount", 0)
 
-# ─── Tool functions ───────────────────────────────────────────────────────────
+logger.info(
+    f"Loaded data: {len(CUSTOMERS)} customers, {len(ORDERS)} orders, "
+    f"{len(PRODUCTS)} products, {len(KNOWLEDGE_BASE)} KB sections"
+)
+
+
+# ─── Tool functions ──────────────────────────────────────────────────────────
 
 async def get_customer(email: str) -> dict:
     """Fetch customer profile by email."""
-    await asyncio.sleep(0.05)  # simulate I/O
+    await asyncio.sleep(0.05)
     customer = CUSTOMERS.get(email.lower())
     if not customer:
-        return {"error": f"Customer with email '{email}' not found."}
+        return {"error": f"Customer with email '{email}' not found in system."}
     return {"success": True, "customer": customer}
 
 
@@ -116,7 +114,38 @@ async def get_order(order_id: str) -> dict:
     order = ORDERS.get(order_id.upper())
     if not order:
         return {"error": f"Order '{order_id}' not found."}
-    return {"success": True, "order": order}
+
+    # Enrich with product info
+    product = PRODUCTS.get(order.get("product_id", "").upper())
+    result = {**order}
+    if product:
+        result["product_name"] = product["name"]
+        result["product_category"] = product.get("category")
+        result["warranty_months"] = product.get("warranty_months", 0)
+        result["product_return_window_days"] = product.get("return_window_days", 30)
+        result["returnable"] = product.get("returnable", True)
+    return {"success": True, "order": result}
+
+
+async def get_orders_by_email(email: str) -> dict:
+    """Look up all orders for a customer by their email address."""
+    await asyncio.sleep(0.05)
+    customer = CUSTOMERS.get(email.lower())
+    if not customer:
+        return {"error": f"No customer found with email '{email}'."}
+
+    customer_id = customer["customer_id"]
+    matching = [o for o in ORDERS.values() if o["customer_id"] == customer_id]
+    if not matching:
+        return {"error": f"No orders found for customer '{customer_id}'."}
+
+    return {
+        "success": True,
+        "customer_id": customer_id,
+        "customer_name": customer["name"],
+        "orders": matching,
+        "total_orders": len(matching),
+    }
 
 
 async def get_product(product_id: str) -> dict:
@@ -132,59 +161,137 @@ async def search_knowledge_base(query: str) -> dict:
     """Search the knowledge base for relevant articles."""
     await asyncio.sleep(0.05)
     query_lower = query.lower()
+    query_words = set(query_lower.split())
     results = []
+
     for article in KNOWLEDGE_BASE:
         score = 0
-        if any(word in article["title"].lower() for word in query_lower.split()):
-            score += 2
-        if any(tag in query_lower for tag in article["tags"]):
-            score += 3
-        if any(word in article["content"].lower() for word in query_lower.split()):
-            score += 1
+        title_lower = article["title"].lower()
+        content_lower = article["content"].lower()
+
+        # Title word matches
+        for word in query_words:
+            if word in title_lower:
+                score += 3
+        # Tag matches
+        for tag in article["tags"]:
+            if tag in query_lower:
+                score += 2
+        # Content word matches
+        for word in query_words:
+            if len(word) > 3 and word in content_lower:
+                score += 1
+
         if score > 0:
             results.append({**article, "relevance_score": score})
+
     results.sort(key=lambda x: x["relevance_score"], reverse=True)
-    return {"success": True, "results": results[:3], "total_found": len(results)}
+    return {"success": True, "results": results[:5], "total_found": len(results)}
 
 
 async def check_refund_eligibility(order_id: str) -> dict:
     """
     Check if an order is eligible for a refund.
-    Simulates random failures ~20% of the time to test retry logic.
+    Considers: return window, refund status, product returnability, customer tier.
+    Simulates random failures ~15% of the time to test retry logic.
     """
     await asyncio.sleep(0.1)
 
     # Simulate transient failure
-    if random.random() < 0.2:
+    if random.random() < 0.15:
         raise RuntimeError(f"Refund service temporarily unavailable for order {order_id}")
 
-    order = ORDERS.get(order_id.upper())
+    oid = order_id.upper()
+    order = ORDERS.get(oid)
     if not order:
         return {"eligible": False, "reason": f"Order '{order_id}' not found."}
 
-    if order_id in _issued_refunds:
-        return {"eligible": False, "reason": "Refund already issued for this order.", "already_refunded": True}
+    # Already refunded?
+    if order.get("refund_status") == "refunded" or oid in _issued_refunds:
+        return {
+            "eligible": False,
+            "reason": "Refund already processed for this order.",
+            "already_refunded": True,
+            "refund_status": "refunded",
+        }
 
-    product = PRODUCTS.get(order["product_id"])
-    return_window = product["return_window_days"] if product else 30
+    # Order must be delivered
+    if order["status"] not in ("delivered",):
+        if order["status"] == "processing":
+            return {"eligible": False, "reason": f"Order is still in '{order['status']}' status. Use cancel_order instead.", "suggest_cancel": True}
+        if order["status"] == "shipped":
+            return {"eligible": False, "reason": "Order is shipped but not yet delivered. Customer must wait for delivery."}
+        return {"eligible": False, "reason": f"Order status is '{order['status']}' — not eligible for refund."}
 
-    if order["status"] not in ("delivered", "shipped"):
-        return {"eligible": False, "reason": f"Order status is '{order['status']}' — not eligible."}
+    product = PRODUCTS.get(order.get("product_id", "").upper(), {})
 
-    if order["delivered_at"]:
-        delivered = datetime.fromisoformat(order["delivered_at"])
-        days_since = (datetime.now() - delivered).days
-        if days_since > return_window:
-            return {
-                "eligible": False,
-                "reason": f"Return window of {return_window} days has passed ({days_since} days since delivery).",
-            }
+    # Check if product is returnable
+    if not product.get("returnable", True):
+        return {"eligible": False, "reason": f"Product '{product.get('name', '')}' is non-returnable."}
+
+    # Check return window
+    return_deadline = order.get("return_deadline")
+    if return_deadline:
+        deadline = datetime.strptime(return_deadline, "%Y-%m-%d")
+        today = datetime.now()
+
+        if today > deadline:
+            # Check for VIP exception
+            customer_id = order.get("customer_id")
+            customer = CUSTOMERS_BY_ID.get(customer_id, {})
+            tier = customer.get("tier", "standard")
+            notes = customer.get("notes", "")
+
+            if tier == "vip" and ("pre-approved" in notes.lower() or "exception" in notes.lower()):
+                return {
+                    "eligible": True,
+                    "order_id": oid,
+                    "amount": order["amount"],
+                    "reason": "Return window expired, but VIP customer has pre-approved extended return exception.",
+                    "vip_exception": True,
+                    "customer_tier": "vip",
+                }
+            elif tier == "premium":
+                days_past = (today - deadline).days
+                if days_past <= 3:
+                    return {
+                        "eligible": True,
+                        "order_id": oid,
+                        "amount": order["amount"],
+                        "reason": f"Return window expired {days_past} day(s) ago, but premium customer is within borderline grace period. Requires supervisor note.",
+                        "premium_borderline": True,
+                        "customer_tier": "premium",
+                    }
+                return {
+                    "eligible": False,
+                    "reason": f"Return window expired on {return_deadline} ({days_past} days ago). Premium tier grace period (3 days) also exceeded.",
+                    "customer_tier": "premium",
+                }
+            else:
+                days_past = (today - deadline).days
+                return {
+                    "eligible": False,
+                    "reason": f"Return window expired on {return_deadline} ({days_past} days ago). Standard tier — no exceptions.",
+                    "customer_tier": tier,
+                }
+
+    # Check warranty (if product has warranty and issue sounds like defect)
+    warranty_months = product.get("warranty_months", 0)
+    delivery_date = order.get("delivery_date")
+    warranty_active = False
+    if warranty_months and delivery_date:
+        delivered = datetime.strptime(delivery_date, "%Y-%m-%d")
+        warranty_end = delivered + timedelta(days=warranty_months * 30)
+        warranty_active = datetime.now() <= warranty_end
 
     return {
         "eligible": True,
-        "order_id": order_id,
+        "order_id": oid,
         "amount": order["amount"],
-        "reason": "Order is within return window and eligible for full refund.",
+        "reason": "Order is within return window and eligible for refund.",
+        "return_deadline": return_deadline,
+        "warranty_active": warranty_active,
+        "warranty_months": warranty_months,
     }
 
 
@@ -192,29 +299,72 @@ async def issue_refund(order_id: str, amount: float) -> dict:
     """Issue a refund for an order."""
     await asyncio.sleep(0.15)
 
-    order = ORDERS.get(order_id.upper())
+    oid = order_id.upper()
+    order = ORDERS.get(oid)
     if not order:
         return {"success": False, "error": f"Order '{order_id}' not found."}
 
-    if order_id in _issued_refunds:
+    if oid in _issued_refunds:
         return {"success": False, "error": "Refund already issued for this order."}
 
-    _issued_refunds[order_id] = amount
-    ref_id = f"REF-{order_id}-{datetime.now().strftime('%H%M%S')}"
+    # Flag high-value refunds for escalation
+    if amount > 200:
+        return {
+            "success": False,
+            "error": f"Refund amount ${amount:.2f} exceeds $200 threshold. Must be escalated for approval.",
+            "requires_escalation": True,
+        }
+
+    _issued_refunds[oid] = amount
+    order["refund_status"] = "refunded"
+    ref_id = f"REF-{oid}-{datetime.now().strftime('%H%M%S')}"
 
     return {
         "success": True,
         "refund_id": ref_id,
-        "order_id": order_id,
+        "order_id": oid,
         "amount_refunded": amount,
-        "message": f"Refund of ${amount:.2f} successfully issued. Reference: {ref_id}. Funds arrive in 3-5 business days.",
+        "message": f"Refund of ${amount:.2f} successfully issued. Reference: {ref_id}. Funds will appear in 5-7 business days.",
     }
+
+
+async def cancel_order(order_id: str) -> dict:
+    """Cancel an order that is still in 'processing' status."""
+    await asyncio.sleep(0.1)
+
+    oid = order_id.upper()
+    order = ORDERS.get(oid)
+    if not order:
+        return {"success": False, "error": f"Order '{order_id}' not found."}
+
+    if order["status"] == "processing":
+        order["status"] = "cancelled"
+        return {
+            "success": True,
+            "order_id": oid,
+            "message": f"Order {oid} has been cancelled successfully. Confirmation email will be sent within 1 hour.",
+            "previous_status": "processing",
+        }
+    elif order["status"] == "shipped":
+        return {
+            "success": False,
+            "error": f"Order {oid} has already been shipped and cannot be cancelled. Customer must wait for delivery and initiate a return.",
+        }
+    elif order["status"] == "delivered":
+        return {
+            "success": False,
+            "error": f"Order {oid} has been delivered. Cancellation is not possible. Please use the return/refund process instead.",
+        }
+    else:
+        return {
+            "success": False,
+            "error": f"Order {oid} is in '{order['status']}' status and cannot be cancelled.",
+        }
 
 
 async def send_reply(ticket_id: str, message: str) -> dict:
     """Send a reply message to the customer for a given ticket."""
     await asyncio.sleep(0.05)
-    # In production this would send an email / push notification
     logger.info(f"[REPLY] Ticket {ticket_id}: {message}")
     return {
         "success": True,
@@ -228,7 +378,7 @@ async def send_reply(ticket_id: str, message: str) -> dict:
 async def escalate(ticket_id: str, summary: str, priority: str = "medium") -> dict:
     """Escalate a ticket to a human agent."""
     await asyncio.sleep(0.05)
-    valid_priorities = ("low", "medium", "high", "critical")
+    valid_priorities = ("low", "medium", "high", "critical", "urgent")
     if priority not in valid_priorities:
         priority = "medium"
 
@@ -237,6 +387,7 @@ async def escalate(ticket_id: str, summary: str, priority: str = "medium") -> di
         "medium": "Tier-2 Support",
         "high": "Senior Support",
         "critical": "Escalation Team",
+        "urgent": "Escalation Team",
     }
 
     logger.info(f"[ESCALATE] Ticket {ticket_id} → {team_map[priority]}: {summary}")
@@ -251,15 +402,17 @@ async def escalate(ticket_id: str, summary: str, priority: str = "medium") -> di
     }
 
 
-# ─── Tool registry ────────────────────────────────────────────────────────────
+# ─── Tool registry ───────────────────────────────────────────────────────────
 
 TOOL_REGISTRY: dict[str, callable] = {
     "get_customer": get_customer,
     "get_order": get_order,
+    "get_orders_by_email": get_orders_by_email,
     "get_product": get_product,
     "search_knowledge_base": search_knowledge_base,
     "check_refund_eligibility": check_refund_eligibility,
     "issue_refund": issue_refund,
+    "cancel_order": cancel_order,
     "send_reply": send_reply,
     "escalate": escalate,
 }
