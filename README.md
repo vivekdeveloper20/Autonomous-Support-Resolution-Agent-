@@ -2,7 +2,6 @@
 
 > A production-grade, multi-agent IT support system powered by **Google ADK (Gemini)** with an autonomous **ReAct agent**, a **FastAPI backend**, and a modern **React + Tailwind dashboard**. The system can analyze problems, search a knowledge base, issue refunds, reply to customers, and escalate to human teams — all without manual intervention.
 
-![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot.png)
 
 ![AI Ticket Agent Overview](./AI-Ticket-Agent-master/images/image.png)
 
@@ -78,13 +77,11 @@ The project has two layers that work together:
 
 ## 🖼️ Project Screenshots
 
-![Dashboard Main View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184134.png)
-
-![Tickets List View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184147.png)
-
-![Ticket Detail View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184223.png)
-
-![Agent Logs View](./AI-Ticket-Agent-master/images/Screenshot%202026-04-19%20184726.png)
+![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot-2.png)
+![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot.png)
+![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot-3.png)
+![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot-4.png)
+![AI Ticket Agent Dashboard](./AI-Ticket-Agent-master/images/dashboard-screenshot-5.png)
 
 ### Agent Roles
 
